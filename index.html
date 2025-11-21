@@ -362,7 +362,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA61-NvaXsIqCJAlkYockyhNOn9jBfq4d0",
   authDomain: "posmaster-b7ee3.firebaseapp.com",
   projectId: "posmaster-b7ee3",
-  storageBucket: "posmaster-b7ee3.appspot.com",
+  storageBucket: "posmaster-b7ee3.firebasestorage.app",
   messagingSenderId: "218428018122",
   appId: "1:218428018122:web:c32565fde06f2ba3fc9333"
 };
@@ -659,4 +659,5 @@ function nextPage() { if(true) { currentInvPage++; renderInvTable(); } }
 function runPredictions() { const list = document.getElementById('predictionList'); list.innerHTML = '<p style="text-align:center">Analizando...</p>'; const now = new Date(); const limit = new Date(); limit.setDate(now.getDate() - 30); let salesMap = {}; db.sales.forEach(s => { if(new Date(s.date) > limit) s.items.forEach(i => { salesMap[i.code] = (salesMap[i.code]||0) + i.qty; }); }); let html = ''; let count = 0; db.products.forEach(p => { const daily = (salesMap[p.code] || 0) / 30; if(daily > 0) { const days = p.qty / daily; if(days < 15) { count++; html += `<div class="pred-card ${days<=3?'crit':days<=7?'warn':'ok'}"><div class="pred-info"><h4>${p.name}</h4><p>Stock: ${p.qty} | Venta/día: ${daily.toFixed(1)}</p></div><div class="pred-stat"><div class="days">${days.toFixed(1)}</div><div class="label">Días</div></div></div>`; } } }); list.innerHTML = count>0 ? html : '<div style="text-align:center;padding:40px;color:#666">✅ Todo bien surtido</div>'; }
 </script>
 </body>
+
 </html>
