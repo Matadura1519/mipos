@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>POS Master - v30 Cloud ☁️</title>
+<title>POS Master - v31 Online 🟢</title>
 <meta name="theme-color" content="#00897B">
 
+<!-- FIREBASE LIBRARIES (VERSIÓN COMPATIBLE HTML) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -157,17 +159,6 @@
   .bar-val { position:absolute; top:-20px; width:100%; text-align:center; font-size:11px; font-weight:bold; color:#666; }
   .bar-label { margin-top:8px; font-size:11px; color:#888; text-align:center; }
 
-  /* PREDICTIONS CARD */
-  .pred-card { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: var(--shadow); border-left: 5px solid #ccc; }
-  .pred-card.crit { border-left-color: var(--danger); background: #FFEBEE; }
-  .pred-card.warn { border-left-color: var(--accent); background: #FFF8E1; }
-  .pred-card.ok { border-left-color: var(--success); }
-  .pred-info h4 { margin:0; font-size:15px; }
-  .pred-info p { margin:4px 0 0 0; font-size:12px; color:#666; }
-  .pred-stat { text-align: right; }
-  .pred-stat .days { font-size: 18px; font-weight: 700; }
-  .pred-stat .label { font-size: 10px; text-transform: uppercase; opacity: 0.7; }
-
   /* SETTINGS */
   .settings-section { background:white; padding:25px; border-radius:16px; box-shadow:var(--shadow); margin-bottom:25px; }
   .settings-section h3 { margin-top:0; color:var(--primary-dark); border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:20px; }
@@ -207,10 +198,13 @@
 </head>
 <body>
 
+<!-- TOAST CONTAINER -->
 <div id="toast-container"></div>
 
+<!-- HIDDEN TICKET AREA -->
 <div id="printableTicket"></div>
 
+<!-- MODALS -->
 <div id="loginModal" class="modal-overlay"><div class="modal-content" style="max-width:350px"><h3>Iniciar Sesión</h3><div class="form-group"><label>Usuario</label><input id="loginUser" type="text" value="admin"></div><div class="form-group"><label>Contraseña</label><input id="loginPass" type="password" value="1234"></div><button class="pay-btn" onclick="handleLogin()">Entrar</button></div></div>
 
 <div id="cashModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:350px"><h3>Apertura de Caja</h3><div class="form-group"><label>Monto Inicial (Fondo)</label><input id="initialCash" type="number" placeholder="0.00"></div><button class="pay-btn" onclick="handleSetInitialCash()">Iniciar Turno</button></div></div>
@@ -231,6 +225,7 @@
     </div>
 </div>
 
+<!-- ALERT MODALS FOR STOCK -->
 <div id="stockWarningModal" class="modal-overlay" style="display:none">
     <div class="modal-content" style="max-width:350px; text-align:center">
         <h3 style="color:var(--danger)">⚠️ Stock Agotado</h3>
@@ -252,11 +247,14 @@
     </div>
 </div>
 
+<!-- CLIENTS MODALS -->
 <div id="abonoModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:350px"><h3>Abonar a Cuenta</h3><div style="margin-bottom:15px">Cliente: <b id="abonoClientName"></b></div><div style="margin-bottom:15px; color:var(--danger)">Deuda Actual: <b id="abonoCurrentDebt">$0.00</b></div><div class="form-group"><label>Monto a Abonar ($)</label><input id="abonoAmount" type="number" style="font-size:20px; font-weight:bold"></div><button class="pay-btn" onclick="processAbono()">Registrar Abono</button><button class="btn btn-ghost" style="width:100%; margin-top:10px" onclick="document.getElementById('abonoModal').style.display='none'">Cancelar</button></div></div>
 <div id="clientDetailModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:450px"><h3>Resumen de Deuda</h3><div style="margin-bottom:15px">Cliente: <b id="detailClientName"></b></div><div style="max-height:300px; overflow-y:auto; border:1px solid #eee; border-radius:8px; padding:10px; margin-bottom:15px" id="detailList"></div><div style="text-align:right; font-weight:bold; font-size:18px; color:var(--danger)" id="detailTotal">Total: $0.00</div><div style="display:flex; gap:10px; margin-top:20px"><button class="btn btn-ghost" style="background:#FFEBEE; color:#D32F2F; flex:1" onclick="manualClearHistory()">🗑️ Borrar/Perdonar Deuda</button><button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('clientDetailModal').style.display='none'">Cerrar</button></div></div></div>
 
+<!-- COMMON ITEM MODAL (F9) -->
 <div id="commonItemModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:300px"><h3>Producto Común</h3><div class="form-group"><label>Precio</label><input id="commonPrice" type="number" style="font-size:24px; text-align:center" onkeydown="if(event.key==='Enter') confirmCommonItem()"></div><button class="pay-btn" onclick="confirmCommonItem()">Agregar</button></div></div>
 
+<!-- OTHER MODALS -->
 <div id="autoCreditModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:350px; border:2px solid var(--accent)"><h3>⚠️ Ticket Abierto</h3><p>Para cerrar turno, el ticket <b>"<span id="acTicketName"></span>"</b> debe asignarse a un cliente.</p><div class="form-group"><label>Cliente</label><select id="acClientSel"></select></div><button class="pay-btn" onclick="confirmAutoCredit()">Guardar como Deuda</button><button class="btn btn-ghost" style="width:100%; margin-top:10px; color:#666" onclick="document.getElementById('autoCreditModal').style.display='none'">Cancelar / Volver</button></div></div>
 <div id="supplierModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:400px"><h3>🚛 Recepción</h3><div class="form-group"><label>Código</label><input id="supCode" placeholder="Escanear..." onkeydown="if(event.key==='Enter') handleSupplierScan()"></div><div id="supInfo" style="display:none; border:1px solid #eee; padding:15px; border-radius:8px; margin-bottom:15px"><div style="font-weight:bold" id="supName"></div><div class="form-group"><label>Cantidad (+)</label><input id="supQty" type="number" onkeydown="if(event.key==='Enter') saveSupplierAdd()"></div><button class="pay-btn" onclick="saveSupplierAdd()">✅ Confirmar</button></div><button class="btn btn-ghost" style="width:100%" onclick="document.getElementById('supplierModal').style.display='none'">Cerrar</button></div></div>
 <div id="moveModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:350px"><h3>Movimiento</h3><div class="form-group"><div style="display:flex; gap:10px"><button id="btnIn" class="pay-method-btn" onclick="setMoveType('entrada')">🟢 Entrada</button><button id="btnOut" class="pay-method-btn" onclick="setMoveType('salida')">🔴 Salida</button></div></div><div class="form-group"><label>Monto</label><input id="moveAmount" type="number"></div><div class="form-group"><label>Motivo</label><input id="moveReason"></div><button class="pay-btn" onclick="confirmMovement()">Guardar</button><button class="btn btn-ghost" style="width:100%" onclick="closeMoveModal()">Cancelar</button></div></div>
@@ -264,6 +262,7 @@
 <div id="bulkModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:320px"><h3>A Granel ⚖️</h3><div style="background:#F0F4C3;padding:10px;margin-bottom:10px"><strong id="bulkName"></strong><span id="bulkPrice"></span></div><input id="bulkQtyInput" type="number" placeholder="0.000" style="font-size:24px;text-align:center;width:100%;margin-bottom:10px" oninput="calcBulkTotal()"><div id="bulkTotalDisplay" style="text-align:center;font-weight:bold;margin-bottom:10px">Total: $0.00</div><button class="pay-btn" onclick="confirmBulkAdd()">Agregar</button></div></div>
 <div id="editProductModal" class="modal-overlay" style="display:none"><div class="modal-content" style="max-width:500px"><h3>Editar</h3><div style="display:grid; grid-template-columns: 100px 1fr; gap:20px"><div style="text-align:center"><img id="imgPreview" src="" alt="Sin Foto" style="width:80px;height:80px;object-fit:contain"><button class="btn-ghost" style="font-size:10px" onclick="searchImageOnGoogle()">🔍 Buscar</button></div><div><label>Imagen URL</label><input id="editImage" oninput="updateImgPreview()" style="width:100%"></div></div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px"><input id="editCode" disabled><input id="editQty" type="number"><input id="editName" style="grid-column:span 2"><select id="editSaleType"><option value="Unidad">Unidad</option><option value="Granel">Granel</option></select><input id="editPrice" type="number"><input id="editDept"></div><div style="display:flex; gap:10px; margin-top:15px"><button class="pay-btn" onclick="saveProductChanges()">Guardar</button><button class="btn btn-ghost" onclick="closeEditModal()">Cancelar</button></div><button class="btn" style="width:100%; margin-top:15px; color:red" onclick="deleteProductFromModal()">Eliminar</button></div></div>
 
+<!-- APP STRUCTURE -->
 <div class="app">
   <aside class="sidebar">
     <div class="brand"><span id="brandNameDisplay">Abarrotes<br>Los Altos</span> <span style="font-size:10px; opacity:0.6">v30</span></div>
@@ -278,12 +277,14 @@
     <div class="logout-btn" onclick="doLogout()">↪️ Cerrar Sesión</div>
   </aside>
   <main class="main">
+    <!-- POS MODULE -->
     <div id="POS">
         <div class="pos-catalog">
             <div class="search-bar-container"><span>🔍</span><input type="text" id="catalogSearch" placeholder="Buscar (F10)..." onkeydown="checkSearchEnter(event)" onkeyup="renderCatalog()"></div>
             <div class="products-grid" id="productsGrid"></div>
         </div>
         <div class="pos-cart">
+            <!-- TABS -->
             <div class="ticket-tabs" id="ticketTabs"></div>
             <div class="cart-content">
                 <h3 style="margin-top:0; margin-bottom:10px; font-size:14px; color:#666" id="activeTicketLabel">Ticket 1</h3>
@@ -296,6 +297,7 @@
         </div>
     </div>
     
+    <!-- CLIENTES MODULE -->
     <div id="Clientes" class="page-container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
             <h2 class="page-title" style="margin:0">Cartera de Clientes</h2>
@@ -312,6 +314,7 @@
         <div id="clientsList"></div>
     </div>
 
+    <!-- CAJA MODULE -->
     <div id="Caja" class="page-container">
         <h2 class="page-title">Gestión de Caja</h2>
         <div class="caja-resumen-grid">
@@ -324,6 +327,7 @@
         </div>
     </div>
 
+    <!-- REPORTES -->
     <div id="Reportes" class="page-container">
         <h2 class="page-title">Reportes</h2>
         <div class="charts-container">
@@ -349,6 +353,7 @@
     <div id="Cfg_Ticket" class="page-container"><div style="display:flex; justify-content:space-between; margin-bottom:20px"><h2 class="page-title">🧾 Ticket</h2><button class="btn btn-ghost" onclick="showPage('Configuracion')">← Volver</button></div><div class="settings-section"><div class="form-group"><label>Logo URL</label><input id="cfgLogo"></div><div class="form-group"><label>Encabezado</label><textarea id="cfgHeader" rows="2"></textarea></div><div class="form-group"><label>Pie</label><textarea id="cfgFooter" rows="2"></textarea></div><button class="pay-btn" style="width:auto" onclick="saveConfig()">Guardar</button></div></div>
     <div id="Cfg_Usuarios" class="page-container"><div style="display:flex; justify-content:space-between; margin-bottom:20px"><h2 class="page-title">👥 Usuarios</h2><button class="btn btn-ghost" onclick="showPage('Configuracion')">← Volver</button></div><div class="settings-section"><div style="display:flex; gap:10px; align-items:flex-end; margin-bottom:15px; background:#f9f9f9; padding:15px; border-radius:8px"><div class="form-group" style="margin:0; flex:1"><label>Usuario</label><input id="newUserName"></div><div class="form-group" style="margin:0; flex:1"><label>Contraseña</label><input id="newUserPass"></div><div class="form-group" style="margin:0; width:120px"><label>Rol</label><select id="newUserRole"><option value="cajero">Cajero</option><option value="admin">Admin</option></select></div><button class="pay-btn" style="width:auto; padding:10px 20px" onclick="addUser()">+ Agregar</button></div><table class="users-table"><thead><tr><th>Usuario</th><th>Rol</th><th>Acción</th></tr></thead><tbody id="usersList"></tbody></table></div></div>
     
+    <!-- INVENTARIO -->
     <div id="Inventario" class="page-container"><div class="inv-toolbar"><h2 class="page-title" style="margin:0; margin-right:15px">Inventario</h2><div style="flex:1; display:flex; gap:10px"><input id="invSearch" type="text" placeholder="Buscar..." onkeyup="currentInvPage=1; renderInvTable()" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px"><select id="filterDept" onchange="currentInvPage=1; renderInvTable()" style="width:150px"><option value="">Todos Deptos</option></select></div><button class="btn btn-ghost" style="background:#E1F5FE; color:#0277BD; border:none; margin-left:10px" onclick="openSupplierModal()">🚛 Recepción Proveedor</button><button class="btn btn-ghost" style="background:#F3E5F5; color:#7B1FA2; border:none" onclick="showPage('Prediccion')">🔮 Smart Supply</button></div><div class="inv-table-container"><table id="invTable"><thead><tr><th>Acción</th><th>Código</th><th>Producto</th><th>Costo</th><th>Venta</th><th>Depto</th><th>Stock</th></tr></thead><tbody></tbody></table></div><div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-top:20px"><button class="btn btn-ghost" onclick="prevPage()">◀</button><span id="pageIndicator" style="font-size:14px; font-weight:600; color:#666">1</span><button class="btn btn-ghost" onclick="nextPage()">▶</button></div></div>
     <div id="Prediccion" class="page-container"><div style="display:flex; justify-content:space-between; margin-bottom:20px"><h2 class="page-title">🔮 Predicción de Abasto (IA)</h2><button class="btn btn-ghost" onclick="showPage('Inventario')">← Volver</button></div><div id="predictionList"></div></div>
     <div id="Importar" class="page-container"><button class="btn btn-ghost" onclick="showPage('Opciones')">← Volver</button><h2 class="page-title">Importar</h2><div class="file-drop-zone" onclick="document.getElementById('csvFileInput').click()">📄 Clic para subir CSV<input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleFileSelect(event)"></div><div id="mappingSection" style="display:none; margin-top:30px; background:white; padding:25px; border-radius:16px; box-shadow:var(--shadow)"><h3>Relacionar Columnas</h3><div class="mapping-grid"><div class="form-group"><label>Código *</label><select id="map-code"></select></div><div class="form-group"><label>Nombre *</label><select id="map-name"></select></div><div class="form-group"><label>P. Venta *</label><select id="map-price"></select></div><div class="form-group"><label>Tipo de Venta</label><select id="map-saleType"></select></div><div class="form-group"><label>Stock</label><select id="map-qty"></select></div><div class="form-group"><label>P. Costo</label><select id="map-cost"></select></div><div class="form-group"><label>Depto</label><select id="map-dept"></select></div></div><button class="pay-btn" style="width:auto; margin-top:20px" onclick="processImport()">Importar</button></div></div>
@@ -369,10 +374,10 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let dbFire = null;
-if(firebaseConfig.apiKey !== "AIzaSyA61-NvaXsIqCJAlkYockyhNOn9jBfq4d0") {
+try {
     firebase.initializeApp(firebaseConfig);
     dbFire = firebase.firestore();
-}
+} catch(e) { console.log("Firebase ya iniciado"); }
 
 /* ================= HELPERS & TOAST ================= */
 function showToast(msg, type='neutral') { const c = document.getElementById('toast-container'); const t = document.createElement('div'); t.className = `toast ${type}`; t.innerHTML = type==='success' ? '✅ '+msg : type==='error' ? '❌ '+msg : msg; c.appendChild(t); requestAnimationFrame(() => t.classList.add('show')); setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(),300); }, 3000); }
@@ -428,7 +433,8 @@ async function loadDB() {
                 localStorage.setItem(MAIN_KEY, JSON.stringify(db));
                 showToast("☁️ Datos sincronizados", "cloud");
                 // Refresh UI
-                renderCatalog(); renderTabs(); renderCart(); applyConfigUI();
+                if(document.getElementById('POS').style.display !== 'none') { renderCatalog(); renderTabs(); renderCart(); }
+                applyConfigUI();
             } else {
                 saveDB(); // Create cloud copy
             }
@@ -446,13 +452,15 @@ function saveDB() {
 
 function initAppUI() {
     applyConfigUI();
-    if(!db.session.user) { 
-        document.getElementById('loginModal').style.display='flex'; 
-    } else { 
+    if(db.session.user) { 
+        // Si hay usuario guardado, saltar login
+        document.getElementById('loginModal').style.display='none';
         if(!db.session.role) db.session.role = 'admin'; 
         checkRoleUI(db.session.role); 
         if(!db.session.cash) document.getElementById('cashModal').style.display='flex'; 
         else { renderCatalog(); renderTabs(); renderCart(); setupKeyboard(); }
+    } else {
+        document.getElementById('loginModal').style.display='flex'; 
     }
 }
 
@@ -659,5 +667,4 @@ function nextPage() { if(true) { currentInvPage++; renderInvTable(); } }
 function runPredictions() { const list = document.getElementById('predictionList'); list.innerHTML = '<p style="text-align:center">Analizando...</p>'; const now = new Date(); const limit = new Date(); limit.setDate(now.getDate() - 30); let salesMap = {}; db.sales.forEach(s => { if(new Date(s.date) > limit) s.items.forEach(i => { salesMap[i.code] = (salesMap[i.code]||0) + i.qty; }); }); let html = ''; let count = 0; db.products.forEach(p => { const daily = (salesMap[p.code] || 0) / 30; if(daily > 0) { const days = p.qty / daily; if(days < 15) { count++; html += `<div class="pred-card ${days<=3?'crit':days<=7?'warn':'ok'}"><div class="pred-info"><h4>${p.name}</h4><p>Stock: ${p.qty} | Venta/día: ${daily.toFixed(1)}</p></div><div class="pred-stat"><div class="days">${days.toFixed(1)}</div><div class="label">Días</div></div></div>`; } } }); list.innerHTML = count>0 ? html : '<div style="text-align:center;padding:40px;color:#666">✅ Todo bien surtido</div>'; }
 </script>
 </body>
-
 </html>
